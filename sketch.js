@@ -30,7 +30,6 @@ const teamColors = [
 
 
 const switchToMode = (mode) => {
-    console.log(mode, currentEditMode);
     if (mode === currentEditMode) {
         return;
     }
