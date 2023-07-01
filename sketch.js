@@ -30,10 +30,10 @@ const editModes = {
         radius: 25,
         color: { r: 164, g: 179, b: 193, a: 10 }
     },
-}
+};
 
 let flock;
-let paused = true;
+let paused = false;
 let totalTicks = 0;
 let showStats = true;
 let mouseSpawnColor = -1;
@@ -78,7 +78,6 @@ function setup() {
         spawnBoids(1, spawnX, spawnY);
     }
     totalTicks = 0;
-    noLoop();
 }
 
 const spawnBoids = (amount, spawnX, spawnY, scatterRadius = 0) => {
@@ -95,10 +94,9 @@ const spawnBoids = (amount, spawnX, spawnY, scatterRadius = 0) => {
 
 function draw() {
     background(51);
-    renderStats();
     flock.run();
-
     renderEditMode();
+    renderStats();
 }
 
 const renderEditMode = () => {
@@ -246,11 +244,6 @@ function keyPressed() {
     });
 
     if (key === 'Escape') {
-        if (paused) {
-            loop();
-        } else {
-            noLoop();
-        }
         paused = !paused;
     }
     if (key === 'h') {
@@ -273,11 +266,6 @@ class Flock {
     }
 
     run = () => {
-        const amountToSpawn = this.boids.filter(boid => boid.lifeSpan <= 0).length;
-        const spawnX = Math.floor(Math.random() * width);
-        const spawnY = Math.floor(Math.random() * height);
-        spawnBoids(amountToSpawn, spawnX, spawnY);
-
         this.boids = this.boids.filter(boid => boid.lifeSpan > 0);
         this.boids.forEach(boid => boid.run(this.boids));
         totalTicks++;
@@ -304,9 +292,11 @@ class Boid {
     }
 
     run = boids => {
-        this.flock(boids);
-        this.update(boids);
-        this.borders();
+        if (!paused) {
+            this.flock(boids);
+            this.update(boids);
+            this.borders();
+        }
         this.render();
     }
 
@@ -361,19 +351,19 @@ class Boid {
         // Draw a triangle rotated in the direction of velocity
         let theta = this.velocity.heading() + radians(90);
         fill(this.color.r, this.color.g, this.color.b);
+        strokeWeight(3);
         if (this.selected) {
-            strokeWeight(3);
-            if (this.color.r + this.color.g + this.color.b > 255) {
-                stroke(0, 0, 0, 100);
-            } else {
-                stroke(255, 255, 255, 100);
-            }
+            stroke(255, 255, 255, 100);
         } else {
-            stroke(this.color.r, this.color.g, this.color.b, 100);
+            stroke(this.color.r, this.color.g, this.color.b);
         }
         push();
         translate(this.position.x, this.position.y);
         rotate(theta);
+
+        if (this.selected) {
+            scale(2);
+        }
         beginShape();
         vertex(0, -this.r * 2);
         vertex(-this.r, this.r * 2);
