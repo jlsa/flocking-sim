@@ -14,6 +14,8 @@ let currentEditMode = editModes.default;
 let spawnRadius = 300;
 let eraseRadius = 200;
 
+const maxEraseAtOnce = 10;
+const maxSpawnAtOnce = 10;
 const maxBoids = 250;
 const originalLifeSpan = 10_000;//100_000;
 const teamColors = [
@@ -117,16 +119,14 @@ const renderStats = () => {
         messages.push('current mouse spawn color: ' + (spawnColor ? spawnColor.name : 'random'));
     }
 
-
-
     const colorsInPlay = flock.boids
-    .map(boid => boid.color.name)
-    .filter((value, index, self) => self.indexOf(value) === index)
-    .sort((a, b) => {
-        const aCount = flock.boids.filter(boid => boid.color.name === a).length;
-        const bCount = flock.boids.filter(boid => boid.color.name === b).length;
-        return bCount - aCount;
-    });
+        .map(boid => boid.color.name)
+        .filter((value, index, self) => self.indexOf(value) === index)
+        .sort((a, b) => {
+            const aCount = flock.boids.filter(boid => boid.color.name === a).length;
+            const bCount = flock.boids.filter(boid => boid.color.name === b).length;
+            return bCount - aCount;
+        });
     messages.push('');
     colorsInPlay.forEach(color => {
         messages.push(color + ': ' + flock.boids.filter(boid => boid.color.name === color).length);
@@ -176,15 +176,13 @@ const spawnNewBoidsOnMouseLocation = () => {
     if (currentEditMode !== editModes.spawn) {
         return;
     }
-    console.log('flock.boids', flock.boids.length);
-    const diff = maxBoids - flock.boids.length;
-    if (flock.boids.length <= maxBoids) {
-        // if ()
-        flock.boids.sort((a, b) => a.timeAlive - b.timeAlive).reverse().splice(0, 10);
-    } // if number of boids is below max, don't remove any, just spawn new ones
 
-
-    for (i = 0; i < 10; i++) {
+    let diff = maxBoids - flock.boids.length;
+    if (diff === 0) {
+        flock.boids.sort((a, b) => a.timeAlive - b.timeAlive).reverse().splice(0, maxEraseAtOnce);
+    }
+    diff = maxBoids - flock.boids.length;
+    for (i = 0; i < Math.min(diff, maxSpawnAtOnce); i++) {
         spawnBoids(1, mouseX, mouseY, 300);
     }
 }
