@@ -1,7 +1,35 @@
+// Based on code from
+// The Nature of Code
+// Daniel Shiffman
+// http://natureofcode.com
+// found on p5js website
+// https://p5js.org/examples/simulate-flocking.html
+
 const editModes = {
-    default: 'default',
-    erase: 'erase',
-    spawn: 'spawn',
+    default: {
+        keyBind: 'd',
+        value: 'default',
+        radius: 50,
+        color: { r: 255, g: 215, b: 141, a: 5 }
+    },
+    spawn: {
+        keyBind: 's',
+        value: 'spawn',
+        radius: 300,
+        color: { r: 94, g: 140, b: 102, a: 10 }
+    },
+    erase: {
+        keyBind: 'e',
+        value: 'erase',
+        radius: 200,
+        color: { r: 140, g: 80, b: 94, a: 10 }
+    },
+    select: {
+        keyBind: 'v',
+        value: 'select',
+        radius: 25,
+        color: { r: 164, g: 179, b: 193, a: 10 }
+    },
 }
 
 let flock;
@@ -10,9 +38,6 @@ let totalTicks = 0;
 let showStats = true;
 let mouseSpawnColor = -1;
 let currentEditMode = editModes.default;
-
-let spawnRadius = 300;
-let eraseRadius = 200;
 
 const maxEraseAtOnce = 10;
 const maxSpawnAtOnce = 10;
@@ -73,59 +98,64 @@ function draw() {
     renderStats();
     flock.run();
 
-    // draw spawn radius around cursor
-    if (currentEditMode === editModes.spawn) {
-        stroke(255, 255, 255, 100);
-        noFill();
-        circle(mouseX, mouseY, spawnRadius);
-    }
-
-    // draw erase radius around cursor
-    if (currentEditMode === editModes.erase) {
-        stroke(255, 0, 0, 100);
-        noFill();
-        circle(mouseX, mouseY, eraseRadius);
-    }
+    renderEditMode();
 }
+
+const renderEditMode = () => {
+    strokeWeight(1);
+    stroke(currentEditMode.color.r, currentEditMode.color.g, currentEditMode.color.b, Math.max(currentEditMode.color.a * 2, 100));
+    fill(currentEditMode.color.r, currentEditMode.color.g, currentEditMode.color.b, currentEditMode.color.a);
+
+    ellipse(mouseX, mouseY, currentEditMode.radius, currentEditMode.radius);
+};
 
 const renderStats = () => {
     if (!showStats) {
         return;
     }
     noStroke();
-    textSize(32);
-    fill(0, 102, 153);
+    textSize(18);
+    fill(255, 255, 255);
 
     const messages = [
         'ticks: ' + totalTicks,
         'boids: ' + flock.boids.length,
         'fps: ' + Math.floor(frameRate()),
         'paused: ' + (paused ? 'yes' : 'no'),
-        'press p to pause',
-        'press h to toggle stats',
+        'keybindings:',
+        '    pause = p',
+        '    stats = h',
+        '    spawn = s',
+        '    erase = e',
+        '    select = v',
+        '    default = d',
     ];
 
     if (currentEditMode === editModes.erase) {
-        messages.push('press s to switch to spawn mode');
+        messages.push('click or drag to erase boids');
     }
     if (currentEditMode === editModes.spawn) {
         messages.push('click to add 10 boids');
         messages.push('drag to add 1 boid');
-        messages.push('press e to use erase mode');
         messages.push('press 1-7 to toggle spawn colors');
         messages.push('press 0 to random spawn colors');
         const spawnColor = teamColors[mouseSpawnColor] ?? null;
         messages.push('current mouse spawn color: ' + (spawnColor ? spawnColor.name : 'random'));
+        messages.push('click or drag to spawn boids');
+    }
+    if (currentEditMode === editModes.select) {
+        messages.push('click to select boids');
+        messages.push('selected boids: ' + flock.boids.filter(boid => boid.selected).length);
     }
 
     const colorsInPlay = flock.boids
-        .map(boid => boid.color.name)
-        .filter((value, index, self) => self.indexOf(value) === index)
-        .sort((a, b) => {
-            const aCount = flock.boids.filter(boid => boid.color.name === a).length;
-            const bCount = flock.boids.filter(boid => boid.color.name === b).length;
-            return bCount - aCount;
-        });
+    .map(boid => boid.color.name)
+    .filter((value, index, self) => self.indexOf(value) === index)
+    .sort((a, b) => {
+        const aCount = flock.boids.filter(boid => boid.color.name === a).length;
+        const bCount = flock.boids.filter(boid => boid.color.name === b).length;
+        return bCount - aCount;
+    });
     messages.push('');
     colorsInPlay.forEach(color => {
         messages.push(color + ': ' + flock.boids.filter(boid => boid.color.name === color).length);
@@ -155,23 +185,43 @@ const handleMouseInput = () => {
         return;
     }
 
-    if (currentEditMode === editModes.erase) {
-        flock.boids = flock.boids.filter(boid => {
-            // check if boid is inside erase radius
-            if (dist(boid.position.x, boid.position.y, mouseX, mouseY) <= eraseRadius / 2) {
-                return false;
-            }
+    handleSelectBoid();
+    handleEraseBoids();
+    handleSpawnBoids();
+}
 
-            return dist(boid.position.x, boid.position.y, mouseX, mouseY) > eraseRadius / 2;
-        });
-
+const handleSelectBoid = () => {
+    if (currentEditMode !== editModes.select) {
         return;
     }
 
-    spawnNewBoidsOnMouseLocation();
+    flock.boids.forEach(boid => {
+        if (dist(boid.position.x, boid.position.y, mouseX, mouseY) <= editModes.select.radius / 2) {
+            boid.select();
+        } else {
+            if (keyIsDown(SHIFT)) {
+                boid.deselect();
+            }
+        }
+    });
 }
 
-const spawnNewBoidsOnMouseLocation = () => {
+
+const handleEraseBoids = () => {
+    if (currentEditMode !== editModes.erase) {
+        return;
+    }
+
+    flock.boids = flock.boids.filter(boid => {
+        if (dist(boid.position.x, boid.position.y, mouseX, mouseY) <= editModes.erase.radius / 2) {
+            return false;
+        }
+
+        return dist(boid.position.x, boid.position.y, mouseX, mouseY) > editModes.erase.radius / 2;
+    });
+}
+
+const handleSpawnBoids = () => {
     if (currentEditMode !== editModes.spawn) {
         return;
     }
@@ -187,20 +237,21 @@ const spawnNewBoidsOnMouseLocation = () => {
 }
 
 function keyPressed() {
-    if (key === 'e') {
-        switchToMode(editModes.erase);
-    }
-    if (key === 's') {
-        switchToMode(editModes.spawn);
-    }
-    if (key === 'p') {
+    Object.entries(editModes).forEach(([mode, value]) => {
+        Object.entries(value).forEach(([k, val]) => {
+            if (k === 'keyBind' && val === key) {
+                switchToMode(editModes[mode]);
+            }
+        });
+    });
+
+    if (key === 'Escape') {
         if (paused) {
             loop();
-            paused = false;
         } else {
             noLoop();
-            paused = true;
         }
+        paused = !paused;
     }
     if (key === 'h') {
         showStats = !showStats;
@@ -216,12 +267,6 @@ function keyPressed() {
 
 }
 
-// The Nature of Code
-// Daniel Shiffman
-// http://natureofcode.com
-
-// Flock object
-// Does very little, simply manages the array of all the boids
 class Flock {
     constructor() {
         this.boids = [];
@@ -243,12 +288,6 @@ class Flock {
     };
 }
 
-// The Nature of Code
-// Daniel Shiffman
-// http://natureofcode.com
-
-// Boid class
-// Methods for Separation, Cohesion, Alignment added
 class Boid {
     constructor(x, y, teamColor = null) {
         this.acceleration = createVector(0, 0);
@@ -261,6 +300,7 @@ class Boid {
         this.lifeSpan = originalLifeSpan;
         this.originalColor = Object.assign({}, this.color);
         this.timeAlive = 0;
+        this.selected = false;
     }
 
     run = boids => {
@@ -306,12 +346,12 @@ class Boid {
     // A method that calculates and applies a steering force towards a target
     // STEER = DESIRED MINUS VELOCITY
     seek = target => {
-        let desired = p5.Vector.sub(target,this.position);  // A vector pointing from the location to the target
+        let desired = p5.Vector.sub(target, this.position);  // A vector pointing from the location to the target
         // Normalize desired and scale to maximum speed
         desired.normalize();
         desired.mult(this.maxspeed);
         // Steering = Desired minus Velocity
-        let steer = p5.Vector.sub(desired,this.velocity);
+        let steer = p5.Vector.sub(desired, this.velocity);
         steer.limit(this.maxforce);  // Limit to maximum steering force
 
         return steer;
@@ -321,7 +361,16 @@ class Boid {
         // Draw a triangle rotated in the direction of velocity
         let theta = this.velocity.heading() + radians(90);
         fill(this.color.r, this.color.g, this.color.b);
-        stroke(this.color.r, this.color.g, this.color.b);
+        if (this.selected) {
+            strokeWeight(3);
+            if (this.color.r + this.color.g + this.color.b > 255) {
+                stroke(0, 0, 0, 100);
+            } else {
+                stroke(255, 255, 255, 100);
+            }
+        } else {
+            stroke(this.color.r, this.color.g, this.color.b, 100);
+        }
         push();
         translate(this.position.x, this.position.y);
         rotate(theta);
@@ -335,10 +384,18 @@ class Boid {
 
     // Wraparound
     borders = () => {
-        if (this.position.x < -this.r)  this.position.x = width + this.r;
-        if (this.position.y < -this.r)  this.position.y = height + this.r;
-        if (this.position.x > width + this.r) this.position.x = -this.r;
-        if (this.position.y > height + this.r) this.position.y = -this.r;
+        if (this.position.x < -this.r) {
+            this.position.x = width + this.r;
+        }
+        if (this.position.y < -this.r) {
+            this.position.y = height + this.r;
+        }
+        if (this.position.x > width + this.r) {
+            this.position.x = -this.r;
+        }
+        if (this.position.y > height + this.r) {
+            this.position.y = -this.r;
+        }
     }
 
     // Separation
@@ -378,7 +435,6 @@ class Boid {
 
         return steer;
     }
-
 
     // Alignment
     // For every nearby boid in the system, calculate the average velocity
@@ -463,7 +519,7 @@ class Boid {
                 });
                 // if the most common color is not the current color, change to it
                 if (mostCommonColor != this.color.name) {
-                    if (this.timeAlive > 50) {
+                    if (this.timeAlive > 50) { // TODO make this based on the will of the of the boid
                         this.color = teamColors.find(color => color.name == mostCommonColor);
                     }
                 }
@@ -493,5 +549,13 @@ class Boid {
         } else {
             return createVector(0, 0);
         }
+    }
+
+    select = () => {
+        this.selected = true;
+    }
+
+    deselect = () => {
+        this.selected = false;
     }
 }
