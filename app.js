@@ -4,7 +4,7 @@
  *
  * I, jlsa, have made modifications to the original code to add additional features such as different team colors, an edit mode system, and the ability to spawn and erase boids.
  *
- * @link [Link to your project or repository]
+ * @link https://github.com/jlsa/flocking-sim.git
  * @license MIT
  * @version 0.1.0
  * @author jlsa
