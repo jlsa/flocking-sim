@@ -1,9 +1,14 @@
-// Based on code from
-// The Nature of Code
-// Daniel Shiffman
-// http://natureofcode.com
-// found on p5js website
-// https://p5js.org/examples/simulate-flocking.html
+
+/**
+ * @description This code is based on the flocking simulation code from The Nature of Code by Daniel Shiffman (http://natureofcode.com) and the p5.js flocking example (https://p5js.org/examples/simulate-flocking.html). It simulates the behavior of a flock of birds, where each bird (or "boid") follows three simple rules: alignment, cohesion, and separation. The flocking behavior emerges from the interaction of these individual boids.
+ *
+ * I, jlsa, have made modifications to the original code to add additional features such as different team colors, an edit mode system, and the ability to spawn and erase boids.
+ *
+ * @link [Link to your project or repository]
+ * @license MIT
+ * @version 0.1.0
+ * @author jlsa
+ **/
 
 const editModes = {
     default: {
@@ -53,13 +58,14 @@ const teamColors = [
     { r: 255, g: 192, b: 203, name: 'pink' },
 ];
 
-
 const switchToMode = (mode) => {
+    if (! Object.values(editModes).includes(mode)) {
+        return;
+    }
     if (mode === currentEditMode) {
         return;
     }
 
-    // TODO check if mode is valid
     currentEditMode = mode;
 }
 
