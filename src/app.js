@@ -100,7 +100,7 @@ const renderStats = () => {
         'fps: ' + Math.floor(frameRate()),
         'paused: ' + (paused ? 'yes' : 'no'),
         'keybindings:',
-        '    pause = p',
+        '    pause = esc',
         '    stats = h',
         '    spawn = s',
         '    erase = e',
