@@ -17,6 +17,8 @@ let showStats = true;
 let mouseSpawnColor = -1;
 let currentEditMode = editModes.default;
 
+let canvas;
+
 const maxEraseAtOnce = 10;
 const maxSpawnAtOnce = 10;
 const maxBoids = 250;
@@ -47,7 +49,11 @@ function windowResized() {
 }
 
 function setup() {
-    createCanvas(windowWidth, windowHeight);
+    canvas = createCanvas(windowWidth, windowHeight);
+    canvas.elt.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        handleContextMenu(e);
+    });
 
     flock = new Flock();
     // Add an initial set of boids into the system
@@ -126,13 +132,13 @@ const renderStats = () => {
     }
 
     const colorsInPlay = flock.boids
-    .map(boid => boid.color.name)
-    .filter((value, index, self) => self.indexOf(value) === index)
-    .sort((a, b) => {
-        const aCount = flock.boids.filter(boid => boid.color.name === a).length;
-        const bCount = flock.boids.filter(boid => boid.color.name === b).length;
-        return bCount - aCount;
-    });
+        .map(boid => boid.color.name)
+        .filter((value, index, self) => self.indexOf(value) === index)
+        .sort((a, b) => {
+            const aCount = flock.boids.filter(boid => boid.color.name === a).length;
+            const bCount = flock.boids.filter(boid => boid.color.name === b).length;
+            return bCount - aCount;
+        });
     messages.push('');
     colorsInPlay.forEach(color => {
         messages.push(color + ': ' + flock.boids.filter(boid => boid.color.name === color).length);
@@ -182,7 +188,6 @@ const handleSelectBoid = () => {
         }
     });
 }
-
 
 const handleEraseBoids = () => {
     if (currentEditMode !== editModes.erase) {
@@ -237,3 +242,7 @@ function keyPressed() {
         }
     }
 }
+
+const handleContextMenu = (e) => {
+    console.log('context menu', e);
+};
